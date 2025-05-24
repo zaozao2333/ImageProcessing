@@ -27,6 +27,7 @@ void GuassAverageMaskProcessingBMP(char* oImage, char* nImage, int wImage, int h
 
 void MaxFilterProcessing(char* OrgImage, char* NewImage, int wImage, int hImage);
 void addRandomNoise(char* oImage, int wImage, int hImage, int noiseNum);
+void addRandomNoiseBMP(char* oImage, int wImage, int hImage, int noiseNum);
 
 void MiddleFilterProcessing(char* OrgImage, char* NewImage, int wImage, int hImage, int windowSize);
 void MiddleFilterProcessingBMP(char* OrgImage, char* NewImage, int wImage, int hImage, int windowSize);
@@ -221,8 +222,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					ShowImage(NewImage, IMAGEWIDTH, IMAGEHEIGHT, XPOS, YPOS + 300); 
 					break;
 				case IDM_RANDOMNOISE:
-					addRandomNoise(OrgImage, ImageWidth, ImageHeight, 5000);
-					ShowBmpImage(OrgImage, ImageWidth, ImageHeight, XPOS, YPOS);
+					if (currentImageType == IMAGE_RAW) {
+						addRandomNoise(OrgImage, ImageWidth, ImageHeight, 5000);
+						ShowImage(NewImage, IMAGEWIDTH, IMAGEHEIGHT, XPOS, YPOS);
+					}
+					else {
+						addRandomNoiseBMP(OrgImage, ImageWidth, ImageHeight, 5000);
+						ShowBmpImage(OrgImage, ImageWidth, ImageHeight, XPOS, YPOS);
+					}
 					break;
 				case IDM_MIDDLEFILTER_3:
 					if (currentImageType == IMAGE_RAW) {
@@ -586,6 +593,19 @@ void MaxFilterProcessing(char* OrgImage, char* NewImage, int wImage, int hImage)
 }
 
 void addRandomNoise(char* oImage, int wImage, int hImage, int noiseNum) {
+	int i;
+	int x, y;
+	int index;
+
+	for (i = 0; i < noiseNum; i++) {
+		x = rand() % wImage;
+		y = rand() % hImage;
+
+		oImage[x * wImage + y] = 255;
+	}
+}
+
+void addRandomNoiseBMP(char* oImage, int wImage, int hImage, int noiseNum) {
 	int i;
 	int x, y;
 	int index;
