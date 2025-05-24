@@ -60,6 +60,10 @@ BEGIN
         END
         MENUITEM "随机噪声",                        IDM_RANDOMNOISE
     END
+    POPUP "边缘检测"
+    BEGIN
+        MENUITEM "拉普拉斯算子",                      32785
+    END
     POPUP "&Help"
     BEGIN
         MENUITEM "&About ...",                  IDM_ABOUT

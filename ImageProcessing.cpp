@@ -28,8 +28,13 @@ void GuassAverageMaskProcessingBMP(char* oImage, char* nImage, int wImage, int h
 void MaxFilterProcessing(char* OrgImage, char* NewImage, int wImage, int hImage);
 void addRandomNoise(char* oImage, int wImage, int hImage, int noiseNum);
 
+void MiddleFilterProcessing(char* OrgImage, char* NewImage, int wImage, int hImage, int windowSize);
 void MiddleFilterProcessingBMP(char* OrgImage, char* NewImage, int wImage, int hImage, int windowSize);
+
 void QuickSort(BYTE arr[], int size);
+
+void LaplaceEdgeProcessing(char* oImage, char* nImage, int wImage, int hImage);
+void LaplaceEdgeProcessingBMP(char* oImage, char* nImage, int wImage, int hImage);
 
 HDC  hWinDC;
 int ImageWidth, ImageHeight;
@@ -220,16 +225,44 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					ShowBmpImage(OrgImage, ImageWidth, ImageHeight, XPOS, YPOS);
 					break;
 				case IDM_MIDDLEFILTER_3:
-					MiddleFilterProcessingBMP(OrgImage, NewImage, ImageWidth, ImageHeight, 3);
-					ShowBmpImage(NewImage, ImageWidth, ImageHeight, XPOS, YPOS + 600);
+					if (currentImageType == IMAGE_RAW) {
+						MiddleFilterProcessing(OrgImage, NewImage, IMAGEWIDTH, IMAGEHEIGHT, 3);
+						ShowImage(NewImage, IMAGEWIDTH, IMAGEHEIGHT, XPOS, YPOS + 300);
+					}
+					else {
+						MiddleFilterProcessingBMP(OrgImage, NewImage, ImageWidth, ImageHeight, 3);
+						ShowBmpImage(NewImage, ImageWidth, ImageHeight, XPOS, YPOS + 600);
+					}
 					break;
 				case IDM_MIDDLEFILTER_5:
-					MiddleFilterProcessingBMP(OrgImage, NewImage, ImageWidth, ImageHeight, 5);
-					ShowBmpImage(NewImage, ImageWidth, ImageHeight, XPOS, YPOS + 600);
+					if (currentImageType == IMAGE_RAW) {
+						MiddleFilterProcessing(OrgImage, NewImage, IMAGEWIDTH, IMAGEHEIGHT, 5);
+						ShowImage(NewImage, IMAGEWIDTH, IMAGEHEIGHT, XPOS, YPOS + 300);
+					}
+					else {
+						MiddleFilterProcessingBMP(OrgImage, NewImage, ImageWidth, ImageHeight, 5);
+						ShowBmpImage(NewImage, ImageWidth, ImageHeight, XPOS, YPOS + 600);
+					}
 					break;
 				case IDM_MIDDLEFILTER_7:
-					MiddleFilterProcessingBMP(OrgImage, NewImage, ImageWidth, ImageHeight, 7);
-					ShowBmpImage(NewImage, ImageWidth, ImageHeight, XPOS, YPOS + 600);
+					if (currentImageType == IMAGE_RAW) {
+						MiddleFilterProcessing(OrgImage, NewImage, IMAGEWIDTH, IMAGEHEIGHT, 7);
+						ShowImage(NewImage, IMAGEWIDTH, IMAGEHEIGHT, XPOS, YPOS + 300);
+					}
+					else {
+						MiddleFilterProcessingBMP(OrgImage, NewImage, ImageWidth, ImageHeight, 7);
+						ShowBmpImage(NewImage, ImageWidth, ImageHeight, XPOS, YPOS + 600);
+					}
+					break;
+				case IDM_LAPLACE:
+					if (currentImageType == IMAGE_RAW) {
+						LaplaceEdgeProcessing(OrgImage, NewImage, IMAGEWIDTH, IMAGEHEIGHT);
+						ShowImage(NewImage, IMAGEWIDTH, IMAGEHEIGHT, XPOS, YPOS + 300);
+					}
+					else {
+						LaplaceEdgeProcessingBMP(OrgImage, NewImage, ImageWidth, ImageHeight);
+						ShowBmpImage(NewImage, ImageWidth, ImageHeight, XPOS, YPOS + 600);
+					}
 					break;
 				case IDM_ABOUT:
 				   DialogBox(hInst, (LPCTSTR)IDD_ABOUTBOX, hWnd, (DLGPROC)About);
@@ -425,6 +458,26 @@ void OpenImageFileDlg(char *OPDLTitle)
 	getcwd(ImgDlgFileDir, MAX_PATH);
 }
 
+void LaplaceEdgeProcessing(char* oImage, char* nImage,
+	int wImage, int hImage)
+{
+	int Mask[9] = { 0, 1, 0, 			//Laplace边缘检测模板
+			   1,-4, 1,
+			   0, 1, 0 };
+
+	ImageMaskProcessing(oImage, nImage, wImage, hImage, Mask, 3, 1);
+}
+
+void LaplaceEdgeProcessingBMP(char* oImage, char* nImage,
+	int wImage, int hImage)
+{
+	int Mask[9] = { 0, 1, 0, 			//Laplace边缘检测模板
+			   1,-4, 1,
+			   0, 1, 0 };
+
+	ImageMaskProcessingBMP(oImage, nImage, wImage, hImage, Mask, 3, 1);
+}
+
 void ImageMaskProcessing(char* oImage, char* nImage, int wImage, int hImage,
 	int* Mask, int MaskWH, int MaskCoff)
 {
@@ -472,6 +525,7 @@ void ImageMaskProcessingBMP(char* oImage, char* nImage, int wImage, int hImage,
 		}
 	}
 }
+
 
 void AverageMaskProcessing(char* oImage, char* nImage,	int wImage, int hImage)
 {
@@ -547,6 +601,42 @@ void addRandomNoise(char* oImage, int wImage, int hImage, int noiseNum) {
 	}
 }
 
+void MiddleFilterProcessing(char* OrgImage, char* NewImage, int wImage, int hImage, int windowSize)
+{
+
+	int i, j, m, n, k;
+	int halfSize = windowSize / 2;
+	int windowArea = windowSize * windowSize;
+
+	// 动态分配临时数组用于存储邻域像素值
+	BYTE* window = new BYTE[windowArea];
+
+	for (i = 1; i < hImage - 1; i++) {
+		for (j = 1; j < wImage - 1; j++) {
+			int count = 0;
+
+			// 收集邻域内的像素值
+			for (m = -halfSize; m <= halfSize; m++) {
+				for (n = -halfSize; n <= halfSize; n++) {
+					window[count] = (BYTE)OrgImage[(i + m) * wImage + (j + n)];
+					count++;
+				}
+			}
+
+			QuickSort(window, windowArea); 
+
+			// 取中值(排序后的中间元素)
+			int medianPos = window[windowArea / 2];
+
+			// 计算处理后图像中的像素位置
+			NewImage[i * wImage + j] = (unsigned char)medianPos;
+		}
+	}
+
+	// 释放临时数组
+	delete[] window;
+}
+
 // BMP图像中值滤波处理函数
 void MiddleFilterProcessingBMP(char* OrgImage, char* NewImage, int wImage, int hImage, int windowSize)
 {
@@ -570,9 +660,9 @@ void MiddleFilterProcessingBMP(char* OrgImage, char* NewImage, int wImage, int h
 					// 计算原始图像中的像素位置
 					int srcIndex = ((hImage - (i + m) - 1) * wImage + (j + n)) * 3;
 
-					windowB[count] = OrgImage[srcIndex];     // 蓝色通道
-					windowG[count] = OrgImage[srcIndex + 1]; // 绿色通道
-					windowR[count] = OrgImage[srcIndex + 2]; // 红色通道
+					windowB[count] = (BYTE)OrgImage[srcIndex];     // 蓝色通道
+					windowG[count] = (BYTE)OrgImage[srcIndex + 1]; // 绿色通道
+					windowR[count] = (BYTE)OrgImage[srcIndex + 2]; // 红色通道
 					count++;
 				}
 			}
